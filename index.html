@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>WebCAD — parametric OpenSCAD</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- CodeMirror (classic script, exposes window.CodeMirror) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+
+  <!-- Import Map for ES Modules -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "lil-gui": "https://cdn.jsdelivr.net/npm/lil-gui@0.19/+esm",
+        "lz-string": "https://esm.sh/lz-string@1.5.0"
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div id="app">
+
+    <!-- ============================= TOPBAR ============================= -->
+    <header id="topbar">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3 L28 9.5 V22.5 L16 29 L4 22.5 V9.5 Z" stroke="currentColor" stroke-width="2"
+            stroke-linejoin="round" />
+          <path d="M16 16 L28 9.5 M16 16 V29 M16 16 L4 9.5" stroke="currentColor" stroke-width="2" />
+        </svg>
+        WebCAD
+      </div>
+
+      <input id="design-title" type="text" value="Untitled design" spellcheck="false" />
+
+      <div class="topbar-spacer"></div>
+
+      <button class="btn ghost" id="btn-toggle-code" title="Code editor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 18l-6-6 6-6M15 6l6 6-6 6" />
+        </svg>
+        <span class="btn-label">Code</span>
+      </button>
+
+      <button class="btn ghost" id="btn-toggle-gui" title="Parameters">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1 1.55V21a2 2 0 11-4 0v-.09A1.7 1.7 0 008.6 19.4a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-1.55-1H3a2 2 0 110-4h.09A1.7 1.7 0 004.6 8.6a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06A1.7 1.7 0 008.6 4.6a1.7 1.7 0 001-1.55V3a2 2 0 114 0v.09a1.7 1.7 0 001 1.55 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06A1.7 1.7 0 0019.4 8.6a1.7 1.7 0 001.55 1H21a2 2 0 110 4h-.09a1.7 1.7 0 00-1.55 1z" />
+        </svg>
+        <span class="btn-label">Params</span>
+      </button>
+
+      <div style="position:relative;">
+        <button class="btn ghost" id="btn-my-designs" title="Your designs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16v16H4z" />
+            <path d="M4 9h16" />
+          </svg>
+          <span class="btn-label">Designs</span>
+        </button>
+        <div class="dropdown align-right" id="designs-dropdown"></div>
+      </div>
+
+      <button class="btn ghost" id="btn-save" title="Save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+          <path d="M17 21v-8H7v8M7 3v5h8" />
+        </svg>
+        <span class="btn-label">Save</span>
+      </button>
+
+      <div style="position:relative;">
+        <button class="btn cool" id="btn-share" title="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9" />
+          </svg>
+          <span class="btn-label">Share</span>
+        </button>
+        <div class="dropdown align-right" id="share-dropdown">
+          <div class="dropdown-header">Shareable link</div>
+          <div class="share-box">
+            <p>Anyone with this link opens your exact script, with live parameters — no account needed.</p>
+            <div class="share-url-row">
+              <input id="share-url" type="text" readonly />
+              <button class="btn filled icon-only" id="btn-copy-link" title="Copy link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 9h10v10H9zM5 15V5h10" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="position:relative;">
+        <button class="user-pill" id="btn-user-menu" title="Account">
+          <span class="avatar" id="user-avatar">?</span>
+          <span class="name" id="user-name">—</span>
+        </button>
+        <div class="dropdown align-right" id="user-dropdown">
+          <button class="dropdown-item" id="btn-switch-user">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 1l4 4-4 4" />
+              <path d="M3 11V9a4 4 0 014-4h14" />
+              <path d="M7 23l-4-4 4-4" />
+              <path d="M21 13v2a4 4 0 01-4 4H3" />
+            </svg>
+            Switch user
+          </button>
+          <button class="dropdown-item" id="btn-new-design">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            New design
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============================ WORKSPACE ============================ -->
+    <div id="workspace">
+
+      <!-- Code editor panel -->
+      <aside id="code-panel" class="side-panel collapsed">
+        <div class="panel-header">
+          <span class="label">OpenSCAD source</span>
+          <button class="panel-close" id="close-code-panel" aria-label="Close code panel">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <div id="code-editor-wrap"><textarea id="code-editor" spellcheck="false"></textarea></div>
+        <div class="code-toolbar">
+          <div id="compile-status" class="ok"><span class="dot"></span><span id="compile-status-text">Ready</span></div>
+          <button class="btn filled" id="btn-run" title="Run (Ctrl/Cmd + Enter)">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            Run
+          </button>
+        </div>
+      </aside>
+
+      <!-- 3D viewport -->
+      <main id="viewport-panel">
+        <div id="canvas-container"></div>
+        <div id="loading-badge">
+          <div class="spinner"></div><span>Loading OpenSCAD kernel…</span>
+        </div>
+        <pre id="error-banner"></pre>
+
+        <div class="viewport-actions">
+          <button class="btn ghost icon-only" id="btn-reset-view" title="Reset camera">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+          </button>
+          <button class="btn filled" id="btn-export-stl" title="Download STL">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3v12M7 10l5 5 5-5" />
+              <path d="M4 21h16" />
+            </svg>
+            <span class="btn-label">Export STL</span>
+          </button>
+        </div>
+
+        <div class="mobile-toggle-rail"></div>
+      </main>
+
+      <!-- lil-gui parameters panel -->
+      <aside id="gui-panel" class="side-panel collapsed">
+        <div class="panel-header">
+          <span class="label">Parameters</span>
+          <button class="panel-close" id="close-gui-panel" aria-label="Close parameters panel">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </div>
+        <div id="gui-container"></div>
+      </aside>
+
+    </div>
+  </div>
+
+  <a id="fabify-badge" href="#" title="Built by Fabify">
+    Built by Fabify
+  </a>
+
+  <div id="toast"></div>
+  <div id="modal-root"></div>
+
+  <script type="module" src="main.js"></script>
+</body>
+
+</html>
